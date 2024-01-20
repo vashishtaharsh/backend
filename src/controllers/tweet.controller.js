@@ -39,9 +39,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
 
     const { userId } = req.params
 
-    console.log(userId);
-
-    if (!userId) {
+    if (!(userId || isValidObjectId(userId))) {
         throw new ApiError(404, "invalid userId please enter valid userId")
     }
 
@@ -66,7 +64,7 @@ const updateTweet = asyncHandler(async (req, res) => {
 
     const { content } = req.body
 
-    if (!tweetId) {
+    if (!(tweetId || isValidObjectId(tweetId))) {
         throw new ApiError(401, "enter valid tweetId")
     }
     if (!content || content.trim() === "") {
@@ -96,7 +94,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
     const { tweetId } = req.params
 
-    if (!tweetId) {
+    if (!(tweetId || isValidObjectId(tweetId))) {
         throw new ApiError(401, "enter valid tweetId")
     }
 
