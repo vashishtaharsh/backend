@@ -10,7 +10,39 @@ import { uploadOnCloudinary } from "../utils/Cloudinary.js"
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
-})
+
+    const findQuery = {};
+    if (query) {
+        // Assuming you have a 'title' field in your Video model
+        findQuery.title = { $regex: new RegExp(query, 'i') };
+    }
+
+    // Use Mongoose isValidObject to check if userId is a valid ObjectId
+    if (userId && isValidObjectId(userId)) {
+        findQuery.userId = userId;
+    }
+
+    // Define the sort query based on parameters
+    const sortQuery = {};
+    if (sortBy) {
+        sortQuery[sortBy] = sortType === 'desc' ? -1 : 1;
+    }
+
+    // Execute the query with pagination and sorting
+    const videos = await Video.find(findQuery)
+        .sort(sortQuery)
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit));
+
+    if (!videos) {
+        throw new ApiError(404, "something went wrong while fetching videos using query")
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, videos, "video fetched successfully using query"))
+
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body
@@ -64,7 +96,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
 
-    if (!videoId) {
+    if (!videoId || !mongoose.isValidObjectId(videoId)) {
         throw new ApiError(404, "videoId is required")
     }
 
@@ -83,7 +115,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
 
-    if (!videoId) {
+    if (!videoId || !mongoose.isValidObjectId(videoId)) {
         throw new ApiError(404, "videoId is required")
     }
 
@@ -130,8 +162,8 @@ const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
 
-    if (!videoId) {
-        throw new ApiError(401, "videoId is required")
+    if (!videoId || !mongoose.isValidObjectId(videoId)) {
+        throw new ApiError(401, "valid videoId is required")
     }
 
     const video = await Video.findByIdAndDelete(videoId)
@@ -148,6 +180,27 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
+    if (!videoId || !mongoose.isValidObjectId(videoId)) {
+        throw new ApiError(400, "valid videoId is required");
+    }
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "video not found");
+    }
+
+    // Toggle the isPublished status
+    video.isPublished = !video.isPublished;
+
+    const updatedVideo = await video.save();
+
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updatedVideo, "video publish status updated successfully"))
+
 })
 
 export {
